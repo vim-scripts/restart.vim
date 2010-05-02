@@ -16,15 +16,21 @@ scriptencoding utf-8
 " Document {{{
 "==================================================
 " Name: restart.vim
-" Version: 0.0.0
+" Version: 0.0.2
 " Author:  tyru <tyru.exe@gmail.com>
-" Last Change: 2010-03-02.
+" Last Change: 2010-05-02.
 "
 " Description:
 "   Restart your gVim.
 "
 " Change Log: {{{
 "   0.0.0: Initial upload
+"   0.0.1:
+"   - Do not restart if modified buffer(s) exist.
+"   - etc.
+"   0.0.2:
+"   - Don't show 'modified buffer(s) ...' when banged.
+"   - Add g:restart_save_window_values, g:restart_save_fn.
 " }}}
 " Usage: {{{
 "   Commands: {{{
@@ -35,6 +41,44 @@ scriptencoding utf-8
 "   Global Variables: {{{
 "       g:restart_command (default: 'Restart')
 "           command name to restart gVim.
+"
+"       g:restart_save_window_values (default: 1)
+"           Save window values when restarting gVim.
+"           Saving values are as follows:
+"           - &line
+"           - &columns
+"           - gVim window position (getwinposx(), getwinposy())
+"           Before v0.0.1, restart.vim saves above values.
+"           So this variable is for compatibility.
+"
+"       g:restart_save_fn (default: g:restart_save_fn is true: ['s:save_window_values'], false: [])
+"           This variable saves functions returning ex command.
+"           e.g., in your .vimrc:
+"
+"               function! Hello()
+"                   return 'echomsg "hello"'
+"               endfunction
+"               let g:restart_save_fn = [function('Hello')]
+"
+"           This meaningless example shows "hello" in new starting up gVim.
+"           When g:restart_save_window_values is true,
+"           this variable is ['s:save_window_values'].
+"
+"               function! s:save_window_values() "{{{
+"                   return join([
+"                   \       printf('set lines=%d', &lines),
+"                   \       printf('set columns=%d', &columns),
+"                   \       printf('winpos %s %s', getwinposx(), getwinposy()),
+"                   \   ],
+"                   \   ' | '
+"                   \)
+"               endfunction "}}}
+"
+"          As you can see, this function saves current gVim's:
+"          - &line
+"          - &columns
+"          - getwinposx()
+"          - getwinposy()
 "   }}}
 " }}}
 " TODO: {{{
@@ -63,59 +107,72 @@ set cpo&vim
 if !exists('g:restart_command')
     let g:restart_command = 'Restart'
 endif
+if !exists('g:restart_save_window_values')
+    let g:restart_save_window_values = 1
+endif
+if !exists('g:restart_save_fn')
+    let g:restart_save_fn = []
+endif
+if g:restart_save_window_values
+    call add(g:restart_save_fn, 's:save_window_values')
+endif
 " }}}
 
-" utility functions
-" s:warn {{{
-func! s:warn(msg)
+
+
+function! s:warn(msg) "{{{
     echohl WarningMsg
     echomsg a:msg
     echohl None
-endfunc
-" }}}
-" s:warnf {{{
-func! s:warnf(fmt, ...)
+endfunction "}}}
+function! s:warnf(fmt, ...) "{{{
     call s:warn(call('printf', [a:fmt] + a:000))
-endfunc
-" }}}
-" s:system {{{
-func! s:system(command, ...)
+endfunction "}}}
+function! s:system(command, ...) "{{{
     let args = [a:command] + map(copy(a:000), 'shellescape(v:val)')
     return system(join(args, ' '))
-endfunc
-" }}}
-func! s:is_modified() "{{{
+endfunction "}}}
+function! s:is_modified() "{{{
     try
+        " TODO Boolean value to select whether user switches to modified buffer or not.
         bmodified
         return 1
     catch
         return 0
     endtry
-endfunc "}}}
+endfunction "}}}
 
-" Function to restart {{{
-func! s:restart(bang)
-    let bangged = a:bang ==# '!'
-
-    if s:is_modified()
+function! s:restart(bang) "{{{
+    if s:is_modified() && !a:bang
         call s:warn("modified buffer(s) exist!")
-        if !bangged
-            return
-        endif
+        return
     endif
 
-    call s:system(
-    \   'gvim',
-    \   '-c', printf('set lines=%d', &lines),
-    \   '-c', printf('set columns=%d', &columns),
-    \   '-c', printf('winpos %s %s', getwinposx(), getwinposy()),
+    let system_args = ['gvim']
+    for Fn in g:restart_save_fn
+        let system_args += ['-c', call(Fn, [])]
+        unlet Fn
+    endfor
+    call call('s:system', system_args)
+
+    execute 'qall' . (a:bang ? '!' : '')
+endfunction "}}}
+
+function! s:save_window_values() "{{{
+    return join([
+    \       printf('set lines=%d', &lines),
+    \       printf('set columns=%d', &columns),
+    \       printf('winpos %s %s', getwinposx(), getwinposy()),
+    \   ],
+    \   ' | '
     \)
-    execute 'qall'.a:bang
-endfunc
-" }}}
+endfunction "}}}
+
+
+
 " Command to restart {{{
 if g:restart_command != ''
-    execute 'command! -bang' g:restart_command 'call s:restart("<bang>")'
+    execute 'command! -bar -bang' g:restart_command 'call s:restart(<bang>0)'
 endif
 " }}}
 

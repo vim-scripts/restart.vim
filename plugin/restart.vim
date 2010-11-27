@@ -16,15 +16,16 @@ scriptencoding utf-8
 " Document {{{
 "==================================================
 " Name: restart.vim
-" Version: 0.0.3
+" Version: 0.0.4
 " Author:  tyru <tyru.exe@gmail.com>
-" Last Change: 2010-06-26.
+" Last Change: 2010-11-27.
 "
 " Description:
 "   Restart your gVim.
 "
 " Change Log: {{{
-"   0.0.0: Initial upload
+"   0.0.0:
+"   - Initial upload
 "   0.0.1:
 "   - Do not restart if modified buffer(s) exist.
 "   - etc.
@@ -35,6 +36,8 @@ scriptencoding utf-8
 "   - Add g:restart_vim_progname.
 "   - Support MS Windows.
 "   - Fix minor bugs.
+"   0.0.4:
+"   - Add g:restart_sessionoptions. thanks thinca.
 " }}}
 " Usage: {{{
 "   Commands: {{{
@@ -90,6 +93,10 @@ scriptencoding utf-8
 "          FIXME:
 "          Under MS Windows, you must not assign .bat file path
 "          to this variable. Because cmd.exe appears and won't close.
+"
+"       g:restart_sessionoptions (default: "")
+"          If this variable is not empty, make a session from this value.
+"          And restore the session after vim restarts.
 "   }}}
 " }}}
 " TODO: {{{
@@ -133,6 +140,9 @@ if !exists('g:restart_save_fn')
 endif
 if !exists('g:restart_vim_progname')
     let g:restart_vim_progname = 'gvim'
+endif
+if !exists('g:restart_sessionoptions')
+    let g:restart_sessionoptions = ''
 endif
 
 if g:restart_save_window_values
@@ -277,6 +287,25 @@ function! s:restart(bang) "{{{
         endfor
         unlet Fn
     endfor
+
+    if g:restart_sessionoptions != ''
+        " The reason why not use tempname() is that
+        " the created file will be removed by Vim at exit.
+        let session_file = expand('restart_session.vim', ':p')
+        let i = 0
+        while filereadable(session_file)
+            let session_file = expand('restart_session_' . i . '.vim', ':p')
+            let i += 1
+        endwhile
+        let ssop = &sessionoptions
+        let &sessionoptions = g:restart_sessionoptions
+        mksession `=session_file`
+        let spawn_args += ['-S', session_file,
+        \                  '-c', 'call delete(' . string(session_file) . ')']
+        let &sessionoptions = ssop
+    endif
+
+    wviminfo
     call call('s:spawn', spawn_args)
 
     execute 'qall' . (a:bang ? '!' : '')

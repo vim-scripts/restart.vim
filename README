@@ -68,9 +68,13 @@ Usage:
          Under MS Windows, you must not assign .bat file path
          to this variable. Because cmd.exe appears and won't close.
 
+      g:restart_sessionoptions (default: "")
+         If this variable is not empty, make a session from this value.
+         And restore the session after vim restarts.
+
+
 TODO:
   - Support vim (Is this possible...?)
-
-
-See also:
-  WinMove(vimscript#2576)
+  - Support MacVim
+      - MacVim support was implemented by ujihisa.
+      But g:restart_sessionoptions is not recognized.

@@ -16,9 +16,9 @@ scriptencoding utf-8
 " Document {{{
 "==================================================
 " Name: restart.vim
-" Version: 0.0.4
+" Version: 0.0.5
 " Author:  tyru <tyru.exe@gmail.com>
-" Last Change: 2010-11-27.
+" Last Change: 2010-12-04.
 "
 " Description:
 "   Restart your gVim.
@@ -38,6 +38,8 @@ scriptencoding utf-8
 "   - Fix minor bugs.
 "   0.0.4:
 "   - Add g:restart_sessionoptions. thanks thinca.
+"   0.0.5:
+"   - GUI MacVim support (not complete). thanks ujihisa.
 " }}}
 " Usage: {{{
 "   Commands: {{{
@@ -100,7 +102,10 @@ scriptencoding utf-8
 "   }}}
 " }}}
 " TODO: {{{
-"   - Support vim (Is this possible...?)
+"   - Support terminal vim
+"   - Support MacVim
+"       - MacVim support was implemented by ujihisa.
+"       But g:restart_sessionoptions is not recognized.
 " }}}
 "==================================================
 " }}}
@@ -173,18 +178,16 @@ function! s:shellescape(...) "{{{
         return call('shellescape', a:000)
     endif
 endfunction "}}}
-function! s:spawn(command, ...) "{{{
-    let args = map(copy(a:000), 's:shellescape(v:val)')
+function! s:spawn(args) "{{{
+    let [command; cmdargs] = map(copy(a:args), 's:shellescape(v:val)')
     if s:is_win
-        let command   = s:shellescape(a:command)
-        let arguments = join(args, ' ')
         " NOTE: If a:command is .bat file,
         " cmd.exe appears and won't close.
-        execute printf('silent !start %s %s', command, arguments)
+        execute printf('silent !start %s %s', command, join(cmdargs))
+    elseif has('gui_macvim')
+        macaction newWindow:
     else
-        let command   = s:shellescape(a:command)
-        let arguments = join(args, ' ')
-        execute printf('silent !%s %s', command, arguments)
+        execute printf('silent !%s %s', command, join(cmdargs))
     endif
 endfunction "}}}
 function! s:is_modified() "{{{
@@ -306,7 +309,7 @@ function! s:restart(bang) "{{{
     endif
 
     wviminfo
-    call call('s:spawn', spawn_args)
+    call s:spawn(spawn_args)
 
     execute 'qall' . (a:bang ? '!' : '')
 endfunction "}}}

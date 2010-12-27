@@ -16,12 +16,12 @@ scriptencoding utf-8
 " Document {{{
 "==================================================
 " Name: restart.vim
-" Version: 0.0.5
+" Version: 0.0.6
 " Author:  tyru <tyru.exe@gmail.com>
-" Last Change: 2010-12-04.
+" Last Change: 2010-12-27.
 "
 " Description:
-"   Restart your gVim.
+"   Restart your Vim.
 "
 " Change Log: {{{
 "   0.0.0:
@@ -40,23 +40,27 @@ scriptencoding utf-8
 "   - Add g:restart_sessionoptions. thanks thinca.
 "   0.0.5:
 "   - GUI MacVim support (not complete). thanks ujihisa.
+"   0.0.6:
+"   - Fix error when switching to GUI using :gui
+"   - Fix warning: Delete all buffers before starting new Vim
+"     to not show a warning about swap file. thanks thinca.
 " }}}
 " Usage: {{{
 "   Commands: {{{
 "       :Restart
-"           If modified buffer(s) exist, gVim won't restart.
+"           If modified buffer(s) exist, Vim won't restart.
 "           If you want to quit anyway, add bang(:Restart!).
 "   }}}
 "   Global Variables: {{{
 "       g:restart_command (default: 'Restart')
-"           command name to restart gVim.
+"           command name to restart Vim.
 "
 "       g:restart_save_window_values (default: 1)
-"           Save window values when restarting gVim.
+"           Save window values when restarting Vim.
 "           Saving values are as follows:
 "           - &line
 "           - &columns
-"           - gVim window position (getwinposx(), getwinposy())
+"           - Vim window position (getwinposx(), getwinposy())
 "           Before v0.0.1, restart.vim saves above values.
 "           So this variable is for compatibility.
 "
@@ -69,7 +73,7 @@ scriptencoding utf-8
 "               endfunction
 "               let g:restart_save_fn = [function('Hello')]
 "
-"           This meaningless example shows "hello" in new starting up gVim.
+"           This meaningless example shows "hello" in new starting up Vim.
 "           When g:restart_save_window_values is true,
 "           this variable is ['s:save_window_values'].
 "
@@ -83,14 +87,14 @@ scriptencoding utf-8
 "                   \)
 "               endfunction
 "
-"          As you can see, this function saves current gVim's:
+"          As you can see, this function saves current Vim's:
 "          - &line
 "          - &columns
 "          - getwinposx()
 "          - getwinposy()
 "
 "       g:restart_vim_progname (default: "gvim")
-"          gVim program name to restart.
+"          Vim program name to restart.
 "
 "          FIXME:
 "          Under MS Windows, you must not assign .bat file path
@@ -114,7 +118,7 @@ if !has('gui_running')
     " NOTE: THIS PLUGIN CAN'T WORK UNDER THE TERMINAL.
     augroup restart
         autocmd!
-        autocmd GUIEnter * source `=expand('<sfile>')`
+        autocmd GUIEnter * source <sfile>
     augroup END
     finish
 endif
@@ -309,6 +313,10 @@ function! s:restart(bang) "{{{
     endif
 
     wviminfo
+
+    " Delete all buffers to delete the swap files.
+    silent execute '1,' . bufnr('$') . 'bwipeout'
+
     call s:spawn(spawn_args)
 
     execute 'qall' . (a:bang ? '!' : '')

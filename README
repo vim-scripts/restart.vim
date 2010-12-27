@@ -1,18 +1,5 @@
 This is a mirror of http://www.vim.org/scripts/script.php?script_id=2910
 
-Change Log:
-  0.0.0: Initial upload
-  0.0.1:
-  - Do not restart if modified buffer(s) exist.
-  - etc.
-  0.0.2:
-  - Don't show 'modified buffer(s) ...' when banged.
-  - Add g:restart_save_window_values, g:restart_save_fn.
-  0.0.3:
-  - Add g:restart_vim_progname.
-  - Support MS Windows.
-  - Fix minor bugs.
-
 Usage:
   Commands:
       :Restart
@@ -72,9 +59,8 @@ Usage:
          If this variable is not empty, make a session from this value.
          And restore the session after vim restarts.
 
-
 TODO:
-  - Support vim (Is this possible...?)
+  - Support terminal vim
   - Support MacVim
       - MacVim support was implemented by ujihisa.
       But g:restart_sessionoptions is not recognized.
